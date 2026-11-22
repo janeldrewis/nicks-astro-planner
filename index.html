@@ -91,6 +91,8 @@ input,select{min-height:44px;font-size:16px;padding:0 12px;border-radius:10px;bo
 footer{color:var(--mute);font-size:13px}
 .err{background:#3a1414;border:1px solid var(--red);padding:16px;border-radius:12px}
 [hidden]{display:none!important}
+.tgroup+.tgroup{margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+.tgroup h4{margin:0 0 4px;font-size:15px;font-weight:700}
 .trow{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .thead{display:flex;justify-content:space-between;align-items:start;gap:10px}
 .xbtn{min-height:40px;padding:0 10px;border-radius:8px;border:1px solid transparent;background:transparent;color:var(--mute);cursor:pointer;font-size:13px;flex:none}
@@ -173,7 +175,7 @@ footer{color:var(--mute);font-size:13px}
         <p class="hint">Filters change how much the Moon matters for emission nebulae. Galaxies and clusters always want a dark, moonless sky.</p>
       </fieldset>
       <fieldset><legend>Targets to plan for</legend>
-        <p class="hint" style="margin:0 0 8px">Untick to hide a target for now, or delete it to remove it from the app.</p><div class="checks" id="s-targets"></div><button type="button" class="btn" id="restore" style="margin-top:12px" hidden>Restore deleted targets</button>
+        <p class="hint" style="margin:0 0 8px">Untick to hide a target for now, or delete it to remove it from the app.</p><div id="s-targets"></div><button type="button" class="btn" id="restore" style="margin-top:12px" hidden>Restore deleted targets</button>
       </fieldset>
       <fieldset><legend>Add a target</legend>
         <div class="row">
@@ -381,7 +383,10 @@ function renderSetup(){
   $('s-name').value=S.loc.name;$('s-lat').value=S.loc.lat;$('s-lon').value=S.loc.lon;$('s-min').value=S.minAlt;
   $('s-focal').value=S.focal;$('s-sw').value=S.sw;$('s-sh').value=S.sh;$('s-filter').value=S.filter;
   const p=S.sw+'x'+S.sh;$('s-preset').value=[...$('s-preset').options].some(o=>o.value===p)?p:'';
-  $('s-targets').innerHTML=allT().map(t=>`<div class="trow"><label><input type="checkbox" data-t="${esc(t.id)}" ${S.off.includes(t.id)?'':'checked'}>${esc(t.name)}</label><button type="button" class="xbtn" data-delete="${esc(t.id)}" aria-label="Delete ${esc(t.name)}">Delete</button></div>`).join('');
+  const GROUPS=[['planet','Planets'],['moon','The Moon'],['milkyway','Milky Way'],['galaxy','Galaxies'],['emission','Emission nebulae'],['broadband','Clusters and reflection nebulae']];
+  $('s-targets').innerHTML=GROUPS.map(([k,lab])=>{const ts=allT().filter(t=>t.type===k);if(!ts.length)return'';
+    const on=ts.filter(t=>!S.off.includes(t.id)).length;
+    return `<div class="tgroup"><h4>${lab} <span class="mute small">${on} of ${ts.length} on</span></h4><div class="checks">${ts.map(t=>`<div class="trow"><label><input type="checkbox" data-t="${esc(t.id)}" ${S.off.includes(t.id)?'':'checked'}>${esc(t.name)}</label><button type="button" class="xbtn" data-delete="${esc(t.id)}" aria-label="Delete ${esc(t.name)}">Delete</button></div>`).join('')}</div></div>`}).join('');
   const nd=(S.deleted||[]).length;$('restore').hidden=!nd;$('restore').textContent=`Restore ${nd} deleted built-in target${nd===1?'':'s'}`;
   $('c-list').innerHTML=S.custom.map(t=>`<div class="cust"><span>${esc(t.name)} <span class="small mute">RA ${t.ra}h · Dec ${t.dec}°</span></span><button type="button" class="cbtn" data-del="${esc(t.id)}">Remove</button></div>`).join('');
 }
@@ -419,7 +424,7 @@ $('setup').addEventListener('input',e=>{
   else if(id==='s-sh'&&+v>0){S.sh=+v;$('s-preset').value='';renderTargets()}
   else if(id==='s-preset'&&v){const[w,h]=v.split('x').map(Number);S.sw=w;S.sh=h;$('s-sw').value=w;$('s-sh').value=h;renderTargets()}
   else if(id==='s-filter'){S.filter=v;recompute()}
-  else if(e.target.dataset.t){const t=e.target.dataset.t;S.off=e.target.checked?S.off.filter(x=>x!==t):[...S.off,t];recompute()}
+  else if(e.target.dataset.t){const t=e.target.dataset.t;S.off=e.target.checked?S.off.filter(x=>x!==t):[...S.off,t];save();renderSetup();$('s-targets').querySelector(`[data-t="${t}"]`)?.focus();recompute()}
   save();
 });
 $('c-add').addEventListener('click',()=>{
