@@ -55,7 +55,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible{ou
 .btn{display:inline-flex;align-items:center;min-height:44px;padding:0 16px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);text-decoration:none;cursor:pointer;font-weight:600}
 .btn.red{background:var(--red);border-color:var(--red);color:#1a0706}
 .nights{display:flex;flex-direction:column;gap:8px;margin-top:14px}
-.night{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.night{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
 .night.sel{border-color:var(--red)}
 .night.cloud{opacity:.45}
 .nmain{display:grid;grid-template-columns:118px 64px minmax(0,1fr);gap:10px;align-items:center;background:none;border:0;text-align:left;cursor:pointer;padding:4px;min-height:44px;border-radius:8px}
@@ -121,7 +121,7 @@ footer{color:var(--mute);font-size:13px}
     <div class="panel" id="tonight"><p class="mute">Working out the sky…</p></div>
     <div style="margin-top:34px">
       <h2>Upcoming nights</h2>
-      <p class="mute small">Tap a night to see its timeline. Mark nights that cloud out so they stop showing up as best picks.</p>
+      <p class="mute small">Tap a night to see its timeline. Nights forecast at 75% cloud or more are dimmed.</p>
       <div class="nights" id="nightlist"></div>
       <button class="btn" id="more" style="margin-top:12px">Show all 30 nights</button>
     </div>
@@ -241,7 +241,7 @@ const clone=o=>JSON.parse(JSON.stringify(o));
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let S=clone(DEF),CLOUD=[],NIGHTS=[],SEL=0,ALL=false,WX=null;
-try{const v=JSON.parse(localStorage.getItem('skyplan')||'null');if(v)S={...clone(DEF),...v,loc:{...DEF.loc,...(v.loc||{})}};CLOUD=JSON.parse(localStorage.getItem('skyplan-cloud')||'[]');WX=JSON.parse(localStorage.getItem('skyplan-wx')||'null')}catch(e){}
+try{const v=JSON.parse(localStorage.getItem('skyplan')||'null');if(v)S={...clone(DEF),...v,loc:{...DEF.loc,...(v.loc||{})}};CLOUD=[];WX=JSON.parse(localStorage.getItem('skyplan-wx')||'null')}catch(e){}
 const wxKey=()=>[(+S.loc.lat).toFixed(3),(+S.loc.lon).toFixed(3)];
 function wxAt(t){if(!WX)return null;const[la,lo]=wxKey();if(WX.la!==la||WX.lo!==lo)return null;
   const i=Math.floor((t.getTime()/1000-WX.time[0])/3600);if(i<0||i>=WX.time.length||WX.cc[i]==null)return null;
@@ -340,7 +340,7 @@ function renderTonight(){
   const title=SEL===0&&new Date().getHours()>=8||SEL===0?'Tonight':fmtD(n.day);
   const cl=CLOUD.includes(n.key);
   $('tonight').innerHTML=`
-   <div class="top"><h2 style="margin:0">${title}${SEL===0?` <span class="mute" style="font-weight:600;font-size:17px">${fmtD(n.day)}</span>`:''}</h2>${cl?'<span class="chip">Marked clouded out</span>':''}${n.shower?`<span class="chip met">${n.shower} meteor shower peak</span>`:''}</div>
+   <div class="top"><h2 style="margin:0">${title}${SEL===0?` <span class="mute" style="font-weight:600;font-size:17px">${fmtD(n.day)}</span>`:''}</h2>${n.shower?`<span class="chip met">${n.shower} meteor shower peak</span>`:''}</div>
    <div class="facts">
     <div><span>Astronomical dark</span><b>${n.darkStart?fmt(n.darkStart)+' – '+fmt(n.darkEnd):'None'}</b></div>
     <div><span>Moon</span><b style="display:inline-flex;gap:8px;align-items:center">${moonSvg(n.illum,n.phase,20)}${pct(n.illum)} ${n.phase<180?'waxing':'waning'}</b></div>
@@ -361,13 +361,13 @@ function renderTonight(){
 }
 function renderNights(){
   const list=ALL?NIGHTS:NIGHTS.slice(0,14);
-  $('nightlist').innerHTML=list.map((n,i)=>{const man=CLOUD.includes(n.key),cl=man||(n.cloud!=null&&n.cloud>=75);
-   return `<div class="night ${i===SEL?'sel':''} ${cl?'cloud':''}"><button class="nmain" data-sel="${i}" aria-label="Show ${fmtD(n.day)}"><span class="d">${fmtD(n.day)}</span><span class="mp">${moonSvg(n.illum,n.phase)}${pct(n.illum)}</span><span class="chips">${n.cloud!=null?`<span class="chip cc">${cloudWord(n.cloud)} ${n.cloud}%</span>`:''}${n.shower?`<span class="chip met">${n.shower}</span>`:''}${n.res.filter(r=>r.stars>=2).slice(0,3).map(r=>`<span class="chip">${esc(r.T.name.replace(/ \(.*\)/,''))} <span class="dots">${'●'.repeat(r.stars)}</span></span>`).join('')||'<span class="small mute">Poor night for your targets</span>'}</span></button><button class="cbtn" data-cloud="${n.key}" aria-pressed="${man}">${man?'Clouded out':'Mark cloudy'}</button></div>`}).join('');
+  $('nightlist').innerHTML=list.map((n,i)=>{const cl=n.cloud!=null&&n.cloud>=75;
+   return `<div class="night ${i===SEL?'sel':''} ${cl?'cloud':''}"><button class="nmain" data-sel="${i}" aria-label="Show ${fmtD(n.day)}"><span class="d">${fmtD(n.day)}</span><span class="mp">${moonSvg(n.illum,n.phase)}${pct(n.illum)}</span><span class="chips">${n.cloud!=null?`<span class="chip cc">${cloudWord(n.cloud)} ${n.cloud}%</span>`:''}${n.shower?`<span class="chip met">${n.shower}</span>`:''}${n.res.filter(r=>r.stars>=2).slice(0,3).map(r=>`<span class="chip">${esc(r.T.name.replace(/ \(.*\)/,''))} <span class="dots">${'●'.repeat(r.stars)}</span></span>`).join('')||'<span class="small mute">Poor night for your targets</span>'}</span></button></div>`}).join('');
   $('more').textContent=ALL?'Show 14 nights':'Show all 30 nights';
 }
 function renderTargets(){
   const[fw,fh]=fov();
-  $('fovline').textContent=`Your field of view: ${fmtArc(fw)} × ${fmtArc(fh)} (${S.focal} mm on a ${S.sw} × ${S.sh} mm sensor). Best nights skip any you've marked cloudy.`;
+  $('fovline').textContent=`Your field of view: ${fmtArc(fw)} × ${fmtArc(fh)} (${S.focal} mm on a ${S.sw} × ${S.sh} mm sensor).`;
   $('tgrid').innerHTML=targets().map(T=>{
     const r=T.size/fw,w=Math.min(100,r*100);
     const fit=T.type==='planet'?'Tiny: planetary camera and Barlow territory':r<0.08?'Tiny in frame: needs more focal length':r<0.3?'Small: will need cropping':r<=0.9?'Good fit':r<=1.25?'Tight fit':'Bigger than frame: wider lens or mosaic';
