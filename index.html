@@ -92,7 +92,11 @@ footer{color:var(--mute);font-size:13px}
 .err{background:#3a1414;border:1px solid var(--red);padding:16px;border-radius:12px}
 [hidden]{display:none!important}
 .tgroup+.tgroup{margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
-.tgroup h4{margin:0 0 4px;font-size:15px;font-weight:700}
+.tgroup h4{margin:0;font-size:15px;font-weight:700}
+.ghead{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:4px 12px;margin-bottom:4px}
+.gbtns{display:flex;gap:4px}
+.gbtns .xbtn{border-color:var(--line);color:var(--ink)}
+.xbtn:disabled{opacity:.4;cursor:default}
 .trow{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .thead{display:flex;justify-content:space-between;align-items:start;gap:10px}
 .xbtn{min-height:40px;padding:0 10px;border-radius:8px;border:1px solid transparent;background:transparent;color:var(--mute);cursor:pointer;font-size:13px;flex:none}
@@ -268,6 +272,7 @@ const A=window.Astronomy;
 const fmt=t=>t?t.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):'—';
 const fmtD=d=>d.toLocaleDateString([],{weekday:'short',month:'short',day:'numeric'});
 const dkey=d=>d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();
+const GROUPS=[['Planets and the Moon',['planet','moon']],['Galaxies',['galaxy','milkyway']],['Emission nebulae',['emission']],['Clusters and reflection nebulae',['broadband']]];
 const allT=()=>[...CAT.filter(t=>!(S.deleted||[]).includes(t.id)),...S.custom];
 const targets=()=>allT().filter(t=>!S.off.includes(t.id));
 const fov=()=>{const f=+S.focal||400,c=2*180/Math.PI*60;return[c*Math.atan(S.sw/(2*f)),c*Math.atan(S.sh/(2*f))]};
@@ -383,10 +388,9 @@ function renderSetup(){
   $('s-name').value=S.loc.name;$('s-lat').value=S.loc.lat;$('s-lon').value=S.loc.lon;$('s-min').value=S.minAlt;
   $('s-focal').value=S.focal;$('s-sw').value=S.sw;$('s-sh').value=S.sh;$('s-filter').value=S.filter;
   const p=S.sw+'x'+S.sh;$('s-preset').value=[...$('s-preset').options].some(o=>o.value===p)?p:'';
-  const GROUPS=[['planet','Planets'],['moon','The Moon'],['milkyway','Milky Way'],['galaxy','Galaxies'],['emission','Emission nebulae'],['broadband','Clusters and reflection nebulae']];
-  $('s-targets').innerHTML=GROUPS.map(([k,lab])=>{const ts=allT().filter(t=>t.type===k);if(!ts.length)return'';
+    $('s-targets').innerHTML=GROUPS.map(([lab,types],gi)=>{const ts=allT().filter(t=>types.includes(t.type));if(!ts.length)return'';
     const on=ts.filter(t=>!S.off.includes(t.id)).length;
-    return `<div class="tgroup"><h4>${lab} <span class="mute small">${on} of ${ts.length} on</span></h4><div class="checks">${ts.map(t=>`<div class="trow"><label><input type="checkbox" data-t="${esc(t.id)}" ${S.off.includes(t.id)?'':'checked'}>${esc(t.name)}</label><button type="button" class="xbtn" data-delete="${esc(t.id)}" aria-label="Delete ${esc(t.name)}">Delete</button></div>`).join('')}</div></div>`}).join('');
+    return `<div class="tgroup"><div class="ghead"><h4>${lab} <span class="mute small">${on} of ${ts.length} on</span></h4><div class="gbtns"><button type="button" class="xbtn" data-gall="${gi}" ${on===ts.length?'disabled':''}>All on</button><button type="button" class="xbtn" data-gnone="${gi}" ${on===0?'disabled':''}>All off</button></div></div><div class="checks">${ts.map(t=>`<div class="trow"><label><input type="checkbox" data-t="${esc(t.id)}" ${S.off.includes(t.id)?'':'checked'}>${esc(t.name)}</label><button type="button" class="xbtn" data-delete="${esc(t.id)}" aria-label="Delete ${esc(t.name)}">Delete</button></div>`).join('')}</div></div>`}).join('');
   const nd=(S.deleted||[]).length;$('restore').hidden=!nd;$('restore').textContent=`Restore ${nd} deleted built-in target${nd===1?'':'s'}`;
   $('c-list').innerHTML=S.custom.map(t=>`<div class="cust"><span>${esc(t.name)} <span class="small mute">RA ${t.ra}h · Dec ${t.dec}°</span></span><button type="button" class="cbtn" data-del="${esc(t.id)}">Remove</button></div>`).join('');
 }
@@ -444,6 +448,12 @@ function delTarget(id){
 }
 document.addEventListener('click',e=>{const b=e.target.closest('[data-delete]');if(b)delTarget(b.dataset.delete)});
 $('undo').addEventListener('click',()=>{if(!UNDO)return;Object.assign(S,UNDO);UNDO=null;save();$('toast').hidden=true;renderSetup();recompute()});
+$('s-targets').addEventListener('click',e=>{
+  const b=e.target.closest('[data-gall],[data-gnone]');if(!b||b.disabled)return;
+  const g=GROUPS[+(b.dataset.gall??b.dataset.gnone)],ids=allT().filter(t=>g[1].includes(t.type)).map(t=>t.id);
+  S.off=b.dataset.gall!=null?S.off.filter(x=>!ids.includes(x)):[...new Set([...S.off,...ids])];
+  save();renderSetup();recompute();
+});
 $('restore').addEventListener('click',()=>{S.deleted=[];save();renderSetup();recompute()});
 $('reset').addEventListener('click',()=>{S=clone(DEF);CLOUD=[];save();renderSetup();recompute()});
 show(location.hash.slice(1));
