@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Nick's Sky Planner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* VOICE: calm, precise observing log; the thing he opens at dusk to decide
+   IDEA: the red-light observing chart taped beside the telescope
+   PICTURE: tonight's strip: darkness, moon and each target's window, sunset to sunrise
+   COLOUR and TYPE: deep night navy, slate panels, observatory red accent; Manrope throughout
+   LAYOUT: modest title, tabs, strip first, then ranked picks; nights list; targets; setup */
+:root{color-scheme:dark;--bg:#0a0f1e;--panel:#111930;--panel2:#18213d;--line:#27325a;--ink:#e9edf6;--mute:#9aa6c4;--red:#ff5b4f;--redsoft:#ff5b4f33;--dark:#3a4c8a;--twi:#1d2748;--moon:#f1ead4}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 Manrope,system-ui,sans-serif;overflow-x:clip}
+.band{padding:clamp(20px,3.5vw,48px) max(5vw,16px);max-width:1240px;margin:0 auto}
+h1{font-size:clamp(30px,5vw,44px);line-height:1.05;margin:0;font-weight:800;text-wrap:balance}
+h2{font-size:24px;line-height:1.15;margin:0 0 6px;font-weight:700}
+h3{font-size:17px;margin:0;font-weight:700}
+p{margin:0}
+.mute{color:var(--mute)}
+.small{font-size:13px}
+.top{display:flex;flex-wrap:wrap;align-items:end;justify-content:space-between;gap:12px 24px}
+.loc{color:var(--mute)}
+.loc b{color:var(--ink)}
+nav{display:flex;gap:6px;margin-top:20px;flex-wrap:wrap}
+button,select,input{font:inherit;color:inherit}
+.tab{min-height:44px;padding:0 18px;border-radius:22px;border:1px solid var(--line);background:transparent;cursor:pointer;font-weight:600}
+.tab[aria-selected=true]{background:var(--red);border-color:var(--red);color:#1a0706}
+button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible{outline:2px solid var(--red);outline-offset:2px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:clamp(16px,2.5vw,28px)}
+.facts{display:flex;flex-wrap:wrap;gap:8px 28px;margin:10px 0 22px}
+.facts div{white-space:nowrap}
+.facts span{display:block;font-size:13px;color:var(--mute)}
+.facts b{font-size:19px}
+.strip{display:grid;grid-template-columns:clamp(84px,18vw,170px) minmax(0,1fr);gap:6px 12px;align-items:center}
+.strip .lab{font-size:13px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.strip .lab b{color:var(--ink);font-weight:600}
+.track{position:relative;height:22px;border-radius:6px;background:#0c1328;overflow:hidden}
+.track i{position:absolute;top:0;bottom:0}
+.ticks{position:relative;height:18px;font-size:13px;color:var(--mute)}
+.ticks span{position:absolute;transform:translateX(-50%);white-space:nowrap}
+.ticks span.hide{display:none}
+@media(min-width:521px){.ticks span.hide{display:inline}}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:14px;font-size:13px;color:var(--mute)}
+.legend i{display:inline-block;width:14px;height:10px;border-radius:3px;margin-right:6px;vertical-align:middle}
+.picks{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr));gap:12px;margin-top:22px}
+.pick{background:var(--panel2);border-radius:12px;padding:14px 16px}
+.pick .w{white-space:nowrap}
+.dots{letter-spacing:2px;color:var(--red);white-space:nowrap;font-size:13px}
+.dots em{color:#3a4466;font-style:normal}
+.wx{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px;align-items:center}
+.btn{display:inline-flex;align-items:center;min-height:44px;padding:0 16px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);text-decoration:none;cursor:pointer;font-weight:600}
+.btn.red{background:var(--red);border-color:var(--red);color:#1a0706}
+.nights{display:flex;flex-direction:column;gap:8px;margin-top:14px}
+.night{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.night.sel{border-color:var(--red)}
+.night.cloud{opacity:.45}
+.nmain{display:grid;grid-template-columns:118px 64px minmax(0,1fr);gap:10px;align-items:center;background:none;border:0;text-align:left;cursor:pointer;padding:4px;min-height:44px;border-radius:8px}
+.nmain .d{font-weight:700;white-space:nowrap}
+.nmain .mp{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--mute);white-space:nowrap}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:13px;background:var(--panel2);border-radius:20px;padding:3px 10px;white-space:nowrap}
+.chip.met{background:var(--redsoft);color:#ffc9c3}
+.chip.cc{background:#232c4c;color:#d6dcef}
+.warn{color:#ffc9c3}
+#wxline{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;font-size:13px;color:var(--mute);margin:0 0 14px}
+.cbtn{min-height:44px;padding:0 12px;border-radius:10px;border:1px solid var(--line);background:transparent;cursor:pointer;font-size:13px;white-space:nowrap}
+.cbtn[aria-pressed=true]{background:#2a3150}
+@media(max-width:600px){.nmain{grid-template-columns:1fr auto;}.nmain .chips{grid-column:1/-1}.night{grid-template-columns:1fr}.cbtn{justify-self:start}}
+.tgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,320px),1fr));gap:12px;margin-top:14px}
+.tcard{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px}
+.fit{margin:12px 0}
+.frame{position:relative;height:46px;border:1px dashed #4a5784;border-radius:6px;overflow:hidden}
+.frame i{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);height:70%;border-radius:50%;background:radial-gradient(closest-side,#ffb3aa,#ff5b4f66 60%,transparent)}
+.best{list-style:none;padding:0;margin:8px 0 0;display:flex;flex-direction:column;gap:4px;font-size:15px}
+.best li{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+form{display:flex;flex-direction:column;gap:22px}
+fieldset{border:1px solid var(--line);border-radius:14px;padding:16px;margin:0;background:var(--panel)}
+legend{font-weight:700;padding:0 6px}
+.row{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,180px),1fr));gap:12px}
+label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--mute)}
+input,select{min-height:44px;font-size:16px;padding:0 12px;border-radius:10px;border:1px solid var(--line);background:#0c1328;color:var(--ink)}
+.checks{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,210px),1fr));gap:2px 12px}
+.checks label{flex-direction:row;align-items:center;gap:10px;color:var(--ink);font-size:15px;min-height:40px}
+.checks input{min-height:0;width:20px;height:20px;accent-color:var(--red)}
+.hint{font-size:13px;color:var(--mute);margin-top:8px}
+.cust{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:6px 0;border-top:1px solid var(--line)}
+footer{color:var(--mute);font-size:13px}
+.err{background:#3a1414;border:1px solid var(--red);padding:16px;border-radius:12px}
+[hidden]{display:none!important}
+.trow{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.thead{display:flex;justify-content:space-between;align-items:start;gap:10px}
+.xbtn{min-height:40px;padding:0 10px;border-radius:8px;border:1px solid transparent;background:transparent;color:var(--mute);cursor:pointer;font-size:13px;flex:none}
+.xbtn:hover{border-color:var(--line);color:#ffc9c3}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#1f2a4d;border:1px solid var(--line);border-radius:12px;padding:8px 8px 8px 16px;display:flex;align-items:center;gap:12px;box-shadow:0 8px 30px #0008;z-index:10;max-width:calc(100vw - 32px)}
+@media(prefers-reduced-motion:no-preference){.track i{transition:opacity .3s}}
+</style>
+</head>
+<body>
+<header class="band" style="padding-bottom:0">
+  <div class="top">
+    <div>
+      <h1>Nick's Sky Planner</h1>
+      <p class="loc" id="locline"></p>
+    </div>
+    <p class="small mute" style="max-width:360px">Every night for the next month, ranked for each target by cloud forecast, darkness, the Moon and how high it climbs.</p>
+  </div>
+  <nav role="tablist">
+    <button class="tab" role="tab" data-tab="nights" id="t-nights">Nights</button>
+    <button class="tab" role="tab" data-tab="targets" id="t-targets">Targets</button>
+    <button class="tab" role="tab" data-tab="setup" id="t-setup">Setup</button>
+  </nav>
+</header>
+
+<main>
+  <section class="band" id="v-nights">
+    <p id="wxline"></p>
+    <div class="panel" id="tonight"><p class="mute">Working out the sky…</p></div>
+    <div style="margin-top:34px">
+      <h2>Upcoming nights</h2>
+      <p class="mute small">Tap a night to see its timeline. Mark nights that cloud out so they stop showing up as best picks.</p>
+      <div class="nights" id="nightlist"></div>
+      <button class="btn" id="more" style="margin-top:12px">Show all 30 nights</button>
+    </div>
+  </section>
+
+  <section class="band" id="v-targets" hidden>
+    <h2>Targets</h2>
+    <p class="mute small" id="fovline"></p>
+    <div class="tgrid" id="tgrid"></div>
+  </section>
+
+  <section class="band" id="v-setup" hidden>
+    <h2>Setup</h2>
+    <p class="mute small" style="margin-bottom:18px">Settings save on this device automatically.</p>
+    <form id="setup">
+      <fieldset><legend>Location</legend>
+        <div class="row">
+          <label>Name<input id="s-name" autocomplete="off"></label>
+          <label>Latitude (°N)<input id="s-lat" type="number" step="0.0001" inputmode="decimal"></label>
+          <label>Longitude (°E, west is negative)<input id="s-lon" type="number" step="0.0001" inputmode="decimal"></label>
+          <label>Minimum altitude (°)<input id="s-min" type="number" min="0" max="80" step="1"></label>
+        </div>
+        <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center"><button type="button" class="btn" id="geo">Use my current location</button><span class="small mute" id="geomsg"></span></div>
+        <p class="hint">Or in Google Maps, long-press or right-click a spot to copy its coordinates. Minimum altitude is how high a target must be to count: trees, houses and haze near the horizon.</p>
+      </fieldset>
+      <fieldset><legend>Imaging gear</legend>
+        <div class="row">
+          <label>Focal length (mm)<input id="s-focal" type="number" min="8" step="1"></label>
+          <label>Sensor preset<select id="s-preset">
+            <option value="">Custom</option>
+            <option value="36x24">Full frame (36 × 24)</option>
+            <option value="23.5x15.6">APS-C (23.5 × 15.6)</option>
+            <option value="22.3x14.9">Canon APS-C (22.3 × 14.9)</option>
+            <option value="17.3x13">Micro Four Thirds (17.3 × 13)</option>
+            <option value="11.3x11.3">1″ square (e.g. ASI533)</option>
+            <option value="13.2x8.8">1″ (13.2 × 8.8)</option>
+            <option value="7.4x5">Planetary (7.4 × 5)</option>
+          </select></label>
+          <label>Sensor width (mm)<input id="s-sw" type="number" step="0.1" min="1"></label>
+          <label>Sensor height (mm)<input id="s-sh" type="number" step="0.1" min="1"></label>
+        </div>
+        <div class="row" style="margin-top:12px">
+          <label>Filter for nebulae<select id="s-filter">
+            <option value="none">None / broadband</option>
+            <option value="db">Dual-band (Hα + OIII)</option>
+            <option value="nb">Narrowband (3–7 nm)</option>
+          </select></label>
+        </div>
+        <p class="hint">Filters change how much the Moon matters for emission nebulae. Galaxies and clusters always want a dark, moonless sky.</p>
+      </fieldset>
+      <fieldset><legend>Targets to plan for</legend>
+        <p class="hint" style="margin:0 0 8px">Untick to hide a target for now, or delete it to remove it from the app.</p><div class="checks" id="s-targets"></div><button type="button" class="btn" id="restore" style="margin-top:12px" hidden>Restore deleted targets</button>
+      </fieldset>
+      <fieldset><legend>Add a target</legend>
+        <div class="row">
+          <label>Name<input id="c-name" placeholder="e.g. NGC 891" autocomplete="off"></label>
+          <label>RA (hours, decimal)<input id="c-ra" type="number" step="0.001" min="0" max="24" placeholder="2.375"></label>
+          <label>Dec (°, decimal)<input id="c-dec" type="number" step="0.01" min="-90" max="90" placeholder="42.35"></label>
+          <label>Size (arcmin)<input id="c-size" type="number" step="0.1" min="0" placeholder="13"></label>
+          <label>Type<select id="c-type">
+            <option value="galaxy">Galaxy</option>
+            <option value="emission">Emission nebula</option>
+            <option value="broadband">Cluster / reflection</option>
+          </select></label>
+        </div>
+        <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center"><button type="button" class="btn red" id="c-add">Add target</button><span class="small mute" id="c-msg"></span></div>
+        <div id="c-list" style="margin-top:12px"></div>
+      </fieldset>
+      <div><button type="button" class="btn" id="reset">Reset all settings</button></div>
+    </form>
+  </section>
+</main>
+
+<footer class="band">Times are in this device's time zone. Sun, Moon and planet positions are calculated with Astronomy Engine. Cloud, dew and wind forecasts come from Open-Meteo and reach about 16 nights out; nights beyond that are rated on darkness, the Moon and altitude alone. Nights forecast at 75% cloud or more are dimmed automatically.</footer>
+<div class="toast" id="toast" role="status" hidden><span id="toastmsg"></span><button type="button" class="btn red" id="undo">Undo</button></div>
+
+<script src="https://cdn.jsdelivr.net/npm/astronomy-engine@2.1.19/astronomy.browser.min.js"></script>
+<script>
+{
+const CAT=[
+ {id:'m31',name:'Andromeda Galaxy (M31)',type:'galaxy',ra:0.712,dec:41.27,size:178},
+ {id:'m33',name:'Triangulum Galaxy (M33)',type:'galaxy',ra:1.564,dec:30.66,size:70},
+ {id:'m45',name:'Pleiades (M45)',type:'broadband',ra:3.791,dec:24.11,size:110},
+ {id:'dbl',name:'Double Cluster',type:'broadband',ra:2.33,dec:57.13,size:60},
+ {id:'heart',name:'Heart Nebula (IC 1805)',type:'emission',ra:2.55,dec:61.45,size:150},
+ {id:'soul',name:'Soul Nebula (IC 1848)',type:'emission',ra:2.85,dec:60.43,size:150},
+ {id:'cal',name:'California Nebula',type:'emission',ra:4.0,dec:36.42,size:145},
+ {id:'m1',name:'Crab Nebula (M1)',type:'emission',ra:5.575,dec:22.01,size:6},
+ {id:'m42',name:'Orion Nebula (M42)',type:'emission',ra:5.588,dec:-5.39,size:85},
+ {id:'hh',name:'Horsehead & Flame',type:'emission',ra:5.683,dec:-2.2,size:60},
+ {id:'ros',name:'Rosette Nebula',type:'emission',ra:6.533,dec:4.95,size:80},
+ {id:'m81',name:'Bode’s & Cigar (M81/M82)',type:'galaxy',ra:9.926,dec:69.3,size:45},
+ {id:'leo',name:'Leo Triplet',type:'galaxy',ra:11.33,dec:13.3,size:40},
+ {id:'mkn',name:'Markarian’s Chain',type:'galaxy',ra:12.45,dec:13.1,size:90},
+ {id:'m104',name:'Sombrero Galaxy (M104)',type:'galaxy',ra:12.666,dec:-11.62,size:9},
+ {id:'m51',name:'Whirlpool Galaxy (M51)',type:'galaxy',ra:13.498,dec:47.2,size:11},
+ {id:'m101',name:'Pinwheel Galaxy (M101)',type:'galaxy',ra:14.053,dec:54.35,size:29},
+ {id:'rho',name:'Rho Ophiuchi clouds',type:'broadband',ra:16.43,dec:-24.4,size:270},
+ {id:'m13',name:'Hercules Cluster (M13)',type:'broadband',ra:16.695,dec:36.46,size:20},
+ {id:'m8',name:'Lagoon Nebula (M8)',type:'emission',ra:18.06,dec:-24.38,size:90},
+ {id:'m20',name:'Trifid Nebula (M20)',type:'emission',ra:18.04,dec:-23.03,size:28},
+ {id:'m16',name:'Eagle Nebula (M16)',type:'emission',ra:18.313,dec:-13.79,size:35},
+ {id:'m57',name:'Ring Nebula (M57)',type:'emission',ra:18.893,dec:33.03,size:1.4},
+ {id:'m27',name:'Dumbbell Nebula (M27)',type:'emission',ra:19.993,dec:22.72,size:8},
+ {id:'veil',name:'Veil Nebula',type:'emission',ra:20.85,dec:30.9,size:180},
+ {id:'na',name:'North America Nebula',type:'emission',ra:20.98,dec:44.33,size:120},
+ {id:'mw',name:'Milky Way core',type:'milkyway',ra:17.761,dec:-29.0,size:1800},
+ {id:'jup',name:'Jupiter',type:'planet',body:'Jupiter',size:0.7},
+ {id:'sat',name:'Saturn',type:'planet',body:'Saturn',size:0.3},
+ {id:'mars',name:'Mars',type:'planet',body:'Mars',size:0.25},
+ {id:'moon',name:'The Moon',type:'moon',size:31}
+];
+const TYPES={galaxy:'Galaxy',emission:'Emission nebula',broadband:'Cluster / reflection',planet:'Planet',moon:'Moon',milkyway:'Milky Way'};
+const SHOWERS=[['Quadrantids',0,4],['Lyrids',3,22],['Eta Aquariids',4,6],['Perseids',7,12],['Orionids',9,21],['Leonids',10,17],['Geminids',11,14],['Ursids',11,22]];
+const DEF={loc:{name:'Richmond, CA',lat:37.9358,lon:-122.3477},minAlt:30,focal:400,sw:23.5,sh:15.6,filter:'none',off:[],custom:[],deleted:[]};
+const clone=o=>JSON.parse(JSON.stringify(o));
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let S=clone(DEF),CLOUD=[],NIGHTS=[],SEL=0,ALL=false,WX=null;
+try{const v=JSON.parse(localStorage.getItem('skyplan')||'null');if(v)S={...clone(DEF),...v,loc:{...DEF.loc,...(v.loc||{})}};CLOUD=JSON.parse(localStorage.getItem('skyplan-cloud')||'[]');WX=JSON.parse(localStorage.getItem('skyplan-wx')||'null')}catch(e){}
+const wxKey=()=>[(+S.loc.lat).toFixed(3),(+S.loc.lon).toFixed(3)];
+function wxAt(t){if(!WX)return null;const[la,lo]=wxKey();if(WX.la!==la||WX.lo!==lo)return null;
+  const i=Math.floor((t.getTime()/1000-WX.time[0])/3600);if(i<0||i>=WX.time.length||WX.cc[i]==null)return null;
+  return{cc:WX.cc[i],low:WX.low[i],mid:WX.mid[i],high:WX.high[i],temp:WX.temp[i],dew:WX.dew[i],wind:WX.wind[i]}}
+function wxStatus(msg,bad){const el=$('wxline');if(el)el.innerHTML=`<span class="${bad?'warn':''}">${msg}</span> <button class="cbtn" id="wxrefresh">Refresh forecast</button>`}
+let wxBusy=false;
+async function fetchWx(force){
+  const[la,lo]=wxKey();
+  if(!force&&WX&&WX.la===la&&WX.lo===lo&&Date.now()-WX.at<36e5){wxStatus('Cloud forecast from Open-Meteo, updated '+fmt(new Date(WX.at))+'. Covers the next 16 nights.');return}
+  if(wxBusy)return;wxBusy=true;wxStatus('Getting the cloud forecast…');
+  try{
+    const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${la}&longitude=${lo}&hourly=cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high,temperature_2m,dew_point_2m,wind_speed_10m&forecast_days=16&timeformat=unixtime&temperature_unit=fahrenheit&wind_speed_unit=mph`);
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const h=(await r.json()).hourly;
+    WX={la,lo,at:Date.now(),time:h.time,cc:h.cloud_cover,low:h.cloud_cover_low,mid:h.cloud_cover_mid,high:h.cloud_cover_high,temp:h.temperature_2m,dew:h.dew_point_2m,wind:h.wind_speed_10m};
+    try{localStorage.setItem('skyplan-wx',JSON.stringify(WX))}catch(e){}
+    wxBusy=false;recompute();
+  }catch(e){wxBusy=false;wxStatus('Couldn’t reach the cloud forecast, so ratings use darkness and Moon only for now.',true)}
+}
+const save=()=>{try{localStorage.setItem('skyplan',JSON.stringify(S));localStorage.setItem('skyplan-cloud',JSON.stringify(CLOUD))}catch(e){}};
+const A=window.Astronomy;
+const fmt=t=>t?t.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):'—';
+const fmtD=d=>d.toLocaleDateString([],{weekday:'short',month:'short',day:'numeric'});
+const dkey=d=>d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();
+const allT=()=>[...CAT.filter(t=>!(S.deleted||[]).includes(t.id)),...S.custom];
+const targets=()=>allT().filter(t=>!S.off.includes(t.id));
+const fov=()=>{const f=+S.focal||400,c=2*180/Math.PI*60;return[c*Math.atan(S.sw/(2*f)),c*Math.atan(S.sh/(2*f))]};
+const fmtArc=m=>m>=120?(m/60).toFixed(1)+'°':m>=1?Math.round(m)+'′':Math.round(m*60)+'″';
+function sep(r1,d1,r2,d2){const R=Math.PI/180,x=d1*R,y=d2*R;return Math.acos(Math.min(1,Math.sin(x)*Math.sin(y)+Math.cos(x)*Math.cos(y)*Math.cos((r1-r2)*15*R)))/R}
+function moonF(type,x,illum,s){
+  if(x.moon<-0.5||type==='planet')return 1;
+  const near=s<25?1:0;
+  if(type==='emission'&&S.filter==='nb')return Math.max(0,1-illum*(0.12+0.3*near));
+  if(type==='emission'&&S.filter==='db')return Math.max(0,1-illum*(0.35+0.35*near));
+  if(type==='milkyway')return Math.max(0,1-illum*1.2);
+  return Math.max(0,1-illum*(0.75+0.25*near));
+}
+const stars=q=>q>=5?5:q>=3.5?4:q>=2?3:q>=1?2:q>=0.3?1:0;
+const dots=n=>'●'.repeat(n)+'<em>'+'●'.repeat(5-n)+'</em>';
+function scoreT(T,sm,illum,obs){
+  let q=0,cur=-1,best=null;const alts=[];
+  const need=(T.type==='planet'||T.type==='moon')?-10:-18,minA=T.type==='milkyway'?12:S.minAlt;
+  sm.forEach((x,i)=>{
+    let alt,ra,dec;
+    if(T.type==='moon'){alt=x.moon;ra=x.mra;dec=x.mdec}
+    else{if(T.body){const e=A.Equator(A.Body[T.body],x.at,x.obs,true,true);ra=e.ra;dec=e.dec}else{ra=T.ra;dec=T.dec}
+      alt=A.Horizon(x.at,obs,ra,dec,'normal').altitude}
+    let w=0;const ok=x.sun<need&&alt>=minA;
+    if(ok){const aw=0.6+0.4*Math.min(1,(alt-minA)/30);
+      const mf=T.type==='moon'?((illum>0.12&&illum<0.92)?1:0.35):moonF(T.type,x,illum,sep(ra,dec,x.mra,x.mdec));w=aw*mf;
+      if(x.wx){const c=(T.type==='planet'||T.type==='moon')?Math.min(100,Math.max(x.wx.low,x.wx.mid)+0.3*x.wx.high):x.wx.cc;w*=Math.max(0,1-c/100)}}
+    alts.push(w);q+=0.25*w;
+    if(w>=0.5){if(cur<0)cur=i;if(!best||i-cur>best[1]-best[0])best=[cur,i]}else cur=-1;
+  });
+  return{T,q,stars:stars(q),win:best?[sm[best[0]].t,new Date(sm[best[1]].t.getTime()+9e5)]:null,alts};
+}
+function compute(){
+  const obs=new A.Observer(+S.loc.lat,+S.loc.lon,0),tg=targets(),now=new Date();
+  const base=new Date(now);base.setHours(0,0,0,0);if(now.getHours()<8)base.setDate(base.getDate()-1);
+  NIGHTS=[];
+  for(let d=0;d<30;d++){
+    const day=new Date(base);day.setDate(base.getDate()+d);
+    const start=new Date(day);start.setHours(16,0,0,0);
+    const sm=[];
+    for(let i=0;i<=64;i++){
+      const t=new Date(start.getTime()+i*9e5),at=A.MakeTime(t);
+      const s=A.Equator(A.Body.Sun,at,obs,true,true),m=A.Equator(A.Body.Moon,at,obs,true,true);
+      sm.push({t,at,obs,wx:wxAt(t),sun:A.Horizon(at,obs,s.ra,s.dec,'normal').altitude,moon:A.Horizon(at,obs,m.ra,m.dec,'normal').altitude,mra:m.ra,mdec:m.dec});
+    }
+    const mid=A.MakeTime(new Date(start.getTime()+8*36e5));
+    const illum=A.Illumination(A.Body.Moon,mid).phase_fraction,phase=A.MoonPhase(mid);
+    const dk=sm.filter(x=>x.sun<-18);
+    const res=tg.map(T=>scoreT(T,sm,illum,obs)).sort((a,b)=>b.q-a.q);
+    const shower=SHOWERS.find(([n,mo,dd])=>{const p=new Date(day.getFullYear(),mo,dd);return Math.abs(p-day)<=1.5*864e5});
+    const ref=(dk.length?dk:sm.filter(x=>x.sun<-12)).filter(x=>x.wx);
+    const cloud=ref.length?Math.round(ref.reduce((a,x)=>a+x.wx.cc,0)/ref.length):null;
+    const dew=ref.some(x=>x.wx.temp-x.wx.dew<4),wind=ref.length?Math.round(Math.max(...ref.map(x=>x.wx.wind))):null;
+    NIGHTS.push({cloud,dew,wind,day,key:dkey(day),sm,illum,phase,darkStart:dk[0]&&dk[0].t,darkEnd:dk.length?new Date(dk[dk.length-1].t.getTime()+9e5):null,darkH:dk.length*0.25,mfH:dk.filter(x=>x.moon<0).length*0.25,res,shower:shower&&shower[0]});
+  }
+}
+function moonSvg(k,phase,s=22){const r=s/2-1,rx=r*Math.abs(1-2*k),sw=k>0.5?1:0;
+  return `<svg width="${s}" height="${s}" viewBox="${-s/2} ${-s/2} ${s} ${s}" aria-hidden="true"><circle r="${r}" fill="#2a3456"/><path d="M0,${-r}A${r},${r} 0 0 1 0,${r}A${rx},${r} 0 0 ${sw} 0,${-r}Z" fill="var(--moon)" ${phase>180?'transform="scale(-1,1)"':''}/></svg>`}
+const pct=k=>Math.round(k*100)+'%';
+const cloudWord=c=>c<15?'Clear':c<40?'Mostly clear':c<75?'Partly cloudy':'Cloudy';
+function wxLinks(){const la=(+S.loc.lat).toFixed(2),lo=(+S.loc.lon).toFixed(2);
+  return `<a class="btn" href="https://clearoutside.com/forecast/${la}/${lo}" target="_blank" rel="noopener">Clear Outside</a><a class="btn" href="https://www.7timer.info/bin/astro.php?lon=${lo}&lat=${la}&ac=0&unit=british&output=internal&tzshift=0" target="_blank" rel="noopener">7Timer astro</a><a class="btn" href="https://www.astrospheric.com" target="_blank" rel="noopener">Astrospheric</a>`}
+function renderTonight(){
+  const n=NIGHTS[SEL];if(!n)return;
+  const sm=n.sm,vis=sm.map((x,i)=>x.sun<0?i:-1).filter(i=>i>=0);
+  const i0=vis[0]??0,i1=(vis[vis.length-1]??64)+1,span=i1-i0;
+  const L=i=>((i-i0)/span*100).toFixed(2)+'%',Wd=(100/span).toFixed(2)+'%';
+  const seg=(fn)=>{let h='';for(let i=i0;i<i1&&i<sm.length;i++){const c=fn(i);if(c)h+=`<i style="left:${L(i)};width:calc(${Wd} + 1px);${c}"></i>`}return h};
+  let ticks='',c=0;for(let i=i0;i<i1;i++){const t=sm[i].t;if(t.getMinutes()===0){ticks+=`<span class="${c%2?'hide':''}" style="left:${L(i)}">${t.toLocaleTimeString([],{hour:'numeric'})}</span>`;c++}}
+  const top=n.res.filter(r=>r.stars>0).slice(0,6);
+  const rows=top.map(r=>`<div class="lab" title="${esc(r.T.name)}"><b>${esc(r.T.name)}</b></div><div class="track">${seg(i=>r.alts[i]>0?`background:var(--red);opacity:${(0.25+0.75*r.alts[i]).toFixed(2)}`:'')}</div>`).join('');
+  const title=SEL===0&&new Date().getHours()>=8||SEL===0?'Tonight':fmtD(n.day);
+  const cl=CLOUD.includes(n.key);
+  $('tonight').innerHTML=`
+   <div class="top"><h2 style="margin:0">${title}${SEL===0?` <span class="mute" style="font-weight:600;font-size:17px">${fmtD(n.day)}</span>`:''}</h2>${cl?'<span class="chip">Marked clouded out</span>':''}${n.shower?`<span class="chip met">${n.shower} meteor shower peak</span>`:''}</div>
+   <div class="facts">
+    <div><span>Astronomical dark</span><b>${n.darkStart?fmt(n.darkStart)+' – '+fmt(n.darkEnd):'None'}</b></div>
+    <div><span>Moon</span><b style="display:inline-flex;gap:8px;align-items:center">${moonSvg(n.illum,n.phase,20)}${pct(n.illum)} ${n.phase<180?'waxing':'waning'}</b></div>
+    <div><span>Moon-free dark</span><b>${n.mfH.toFixed(1)} h</b> <span style="display:inline" class="mute">of ${n.darkH.toFixed(1)} h</span></div>
+    <div><span>Cloud cover after dark</span><b>${n.cloud==null?'No forecast yet':cloudWord(n.cloud)+' · '+n.cloud+'%'}</b></div>
+   </div>
+   ${n.cloud!=null&&(n.dew||n.wind>=15)?`<div class="chips" style="margin:-10px 0 18px">${n.dew?'<span class="chip met">Dew risk: run the heaters</span>':''}${n.wind>=15?`<span class="chip met">Gusty: up to ${n.wind} mph</span>`:''}</div>`:''}
+   <div class="strip">
+    <div></div><div class="ticks">${ticks}</div>
+    <div class="lab">Sky</div><div class="track">${seg(i=>sm[i].sun<-18?'background:var(--dark)':sm[i].sun<0?'background:var(--twi)':'')}</div>
+    <div class="lab">Clouds</div><div class="track">${n.cloud==null?'<span class="small mute" style="position:absolute;left:8px;top:1px">No forecast yet</span>':seg(i=>sm[i].wx&&sm[i].wx.cc>3?`background:#c9d1e6;opacity:${(sm[i].wx.cc/100*0.9).toFixed(2)}`:'')}</div>
+    <div class="lab">Moon up</div><div class="track">${seg(i=>sm[i].moon>0?`background:var(--moon);opacity:${(0.2+0.7*n.illum).toFixed(2)}`:'')}</div>
+    ${rows||'<div></div><p class="mute small">Nothing on your list is well placed this night.</p>'}
+   </div>
+   <div class="legend"><span><i style="background:var(--dark)"></i>Full dark</span><span><i style="background:var(--twi)"></i>Twilight</span><span><i style="background:#c9d1e6"></i>Clouds (brighter = thicker)</span><span><i style="background:var(--moon)"></i>Moon above horizon</span><span><i style="background:var(--red)"></i>Good for target (brighter = better)</span></div>
+   <div class="picks">${top.slice(0,3).map(r=>`<div class="pick"><h3>${esc(r.T.name)}</h3><div class="dots" aria-label="${r.stars} of 5">${dots(r.stars)}</div><p class="small mute">${TYPES[r.T.type]}${r.win?` · best <span class="w">${fmt(r.win[0])}–${fmt(r.win[1])}</span>`:''}</p></div>`).join('')}</div>
+   <div class="wx"><span class="small mute">Second opinion on seeing and transparency:</span>${wxLinks()}</div>`;
+}
+function renderNights(){
+  const list=ALL?NIGHTS:NIGHTS.slice(0,14);
+  $('nightlist').innerHTML=list.map((n,i)=>{const man=CLOUD.includes(n.key),cl=man||(n.cloud!=null&&n.cloud>=75);
+   return `<div class="night ${i===SEL?'sel':''} ${cl?'cloud':''}"><button class="nmain" data-sel="${i}" aria-label="Show ${fmtD(n.day)}"><span class="d">${fmtD(n.day)}</span><span class="mp">${moonSvg(n.illum,n.phase)}${pct(n.illum)}</span><span class="chips">${n.cloud!=null?`<span class="chip cc">${cloudWord(n.cloud)} ${n.cloud}%</span>`:''}${n.shower?`<span class="chip met">${n.shower}</span>`:''}${n.res.filter(r=>r.stars>=2).slice(0,3).map(r=>`<span class="chip">${esc(r.T.name.replace(/ \(.*\)/,''))} <span class="dots">${'●'.repeat(r.stars)}</span></span>`).join('')||'<span class="small mute">Poor night for your targets</span>'}</span></button><button class="cbtn" data-cloud="${n.key}" aria-pressed="${man}">${man?'Clouded out':'Mark cloudy'}</button></div>`}).join('');
+  $('more').textContent=ALL?'Show 14 nights':'Show all 30 nights';
+}
+function renderTargets(){
+  const[fw,fh]=fov();
+  $('fovline').textContent=`Your field of view: ${fmtArc(fw)} × ${fmtArc(fh)} (${S.focal} mm on a ${S.sw} × ${S.sh} mm sensor). Best nights skip any you've marked cloudy.`;
+  $('tgrid').innerHTML=targets().map(T=>{
+    const r=T.size/fw,w=Math.min(100,r*100);
+    const fit=T.type==='planet'?'Tiny: planetary camera and Barlow territory':r<0.08?'Tiny in frame: needs more focal length':r<0.3?'Small: will need cropping':r<=0.9?'Good fit':r<=1.25?'Tight fit':'Bigger than frame: wider lens or mosaic';
+    const best=NIGHTS.filter(n=>!CLOUD.includes(n.key)).map(n=>({n,r:n.res.find(x=>x.T.id===T.id)})).filter(x=>x.r&&x.r.stars>0).sort((a,b)=>b.r.q-a.r.q).slice(0,3);
+    return `<div class="tcard"><div class="thead"><h3>${esc(T.name)}</h3><button type="button" class="xbtn" data-delete="${esc(T.id)}" aria-label="Delete ${esc(T.name)}">Delete</button></div><p class="small mute">${TYPES[T.type]} · ${fmtArc(T.size)} across</p>
+     <div class="fit"><div class="frame" aria-hidden="true"><i style="width:${Math.max(2,w).toFixed(1)}%"></i></div><p class="small" style="margin-top:6px">${fit}</p></div>
+     <p class="small mute">Best nights in the next 30</p>
+     <ul class="best">${best.map(b=>`<li><span>${fmtD(b.n.day)} <span class="dots">${dots(b.r.stars)}</span></span><span class="small mute">${b.r.win?fmt(b.r.win[0])+'–'+fmt(b.r.win[1]):''}</span></li>`).join('')||'<li class="mute">Not well placed this month</li>'}</ul></div>`}).join('');
+}
+function renderSetup(){
+  $('s-name').value=S.loc.name;$('s-lat').value=S.loc.lat;$('s-lon').value=S.loc.lon;$('s-min').value=S.minAlt;
+  $('s-focal').value=S.focal;$('s-sw').value=S.sw;$('s-sh').value=S.sh;$('s-filter').value=S.filter;
+  const p=S.sw+'x'+S.sh;$('s-preset').value=[...$('s-preset').options].some(o=>o.value===p)?p:'';
+  $('s-targets').innerHTML=allT().map(t=>`<div class="trow"><label><input type="checkbox" data-t="${esc(t.id)}" ${S.off.includes(t.id)?'':'checked'}>${esc(t.name)}</label><button type="button" class="xbtn" data-delete="${esc(t.id)}" aria-label="Delete ${esc(t.name)}">Delete</button></div>`).join('');
+  const nd=(S.deleted||[]).length;$('restore').hidden=!nd;$('restore').textContent=`Restore ${nd} deleted built-in target${nd===1?'':'s'}`;
+  $('c-list').innerHTML=S.custom.map(t=>`<div class="cust"><span>${esc(t.name)} <span class="small mute">RA ${t.ra}h · Dec ${t.dec}°</span></span><button type="button" class="cbtn" data-del="${esc(t.id)}">Remove</button></div>`).join('');
+}
+function renderHead(){$('locline').innerHTML=`Planning for <b>${esc(S.loc.name||'your location')}</b> · ${(+S.loc.lat).toFixed(2)}°, ${(+S.loc.lon).toFixed(2)}°`}
+function all(){renderHead();renderTonight();renderNights();renderTargets()}
+let tm;function recompute(){clearTimeout(tm);tm=setTimeout(()=>{try{compute();if(SEL>=NIGHTS.length)SEL=0;all();fetchWx()}catch(e){$('tonight').innerHTML='<div class="err">Couldn’t calculate the sky. Check the location values in Setup.</div>'}},250)}
+function show(tab){if(!['nights','targets','setup'].includes(tab))tab='nights';
+  for(const t of['nights','targets','setup']){$('v-'+t).hidden=t!==tab;$('t-'+t).setAttribute('aria-selected',t===tab)}}
+document.querySelector('nav').addEventListener('click',e=>{const b=e.target.closest('[data-tab]');if(!b)return;show(b.dataset.tab);try{history.replaceState(null,'','#'+b.dataset.tab)}catch(_){location.hash=b.dataset.tab}});
+window.addEventListener('hashchange',()=>show(location.hash.slice(1)));
+$('nightlist').addEventListener('click',e=>{
+  const s=e.target.closest('[data-sel]'),c=e.target.closest('[data-cloud]');
+  if(s){SEL=+s.dataset.sel;renderTonight();renderNights();$('tonight').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'auto':'smooth',block:'start'})}
+  if(c){const k=c.dataset.cloud;CLOUD=CLOUD.includes(k)?CLOUD.filter(x=>x!==k):[...CLOUD,k];save();renderNights();renderTonight();renderTargets()}
+});
+$('more').addEventListener('click',()=>{ALL=!ALL;renderNights()});
+$('wxline').addEventListener('click',e=>{if(e.target.id==='wxrefresh')fetchWx(true)});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&NIGHTS.length)fetchWx()});
+const wxTimer=setInterval(()=>{if(NIGHTS.length)fetchWx()},36e5);
+$('geo').addEventListener('click',()=>{
+  if(!navigator.geolocation){$('geomsg').textContent='Location isn’t available in this browser.';return}
+  $('geomsg').textContent='Finding you…';
+  navigator.geolocation.getCurrentPosition(p=>{S.loc={name:'My location',lat:+p.coords.latitude.toFixed(4),lon:+p.coords.longitude.toFixed(4)};save();renderSetup();renderHead();$('geomsg').textContent='Location set.';recompute()},
+    ()=>{$('geomsg').textContent='Couldn’t get your location. Enter coordinates instead.'},{timeout:15000});
+});
+$('setup').addEventListener('submit',e=>e.preventDefault());
+$('setup').addEventListener('input',e=>{
+  const id=e.target.id,v=e.target.value;
+  if(id==='s-name'){S.loc.name=v;renderHead()}
+  else if(id==='s-lat'&&v!==''&&Math.abs(+v)<=90){S.loc.lat=+v;recompute()}
+  else if(id==='s-lon'&&v!==''&&Math.abs(+v)<=180){S.loc.lon=+v;recompute()}
+  else if(id==='s-min'&&v!==''){S.minAlt=Math.max(0,Math.min(80,+v));recompute()}
+  else if(id==='s-focal'&&+v>0){S.focal=+v;renderTargets()}
+  else if(id==='s-sw'&&+v>0){S.sw=+v;$('s-preset').value='';renderTargets()}
+  else if(id==='s-sh'&&+v>0){S.sh=+v;$('s-preset').value='';renderTargets()}
+  else if(id==='s-preset'&&v){const[w,h]=v.split('x').map(Number);S.sw=w;S.sh=h;$('s-sw').value=w;$('s-sh').value=h;renderTargets()}
+  else if(id==='s-filter'){S.filter=v;recompute()}
+  else if(e.target.dataset.t){const t=e.target.dataset.t;S.off=e.target.checked?S.off.filter(x=>x!==t):[...S.off,t];recompute()}
+  save();
+});
+$('c-add').addEventListener('click',()=>{
+  const name=$('c-name').value.trim(),ra=parseFloat($('c-ra').value),dec=parseFloat($('c-dec').value),size=parseFloat($('c-size').value)||10;
+  if(!name||!(ra>=0&&ra<24)||!(dec>=-90&&dec<=90)){$('c-msg').textContent='Needs a name, RA between 0 and 24 hours, and Dec between −90 and 90°.';return}
+  S.custom.push({id:'c'+Date.now(),name,ra,dec,size,type:$('c-type').value});save();
+  for(const f of['c-name','c-ra','c-dec','c-size'])$(f).value='';$('c-msg').textContent=name+' added.';renderSetup();recompute();
+});
+$('c-list').addEventListener('click',e=>{const b=e.target.closest('[data-del]');if(!b)return;const id=b.dataset.del;S.custom=S.custom.filter(t=>t.id!==id);S.off=S.off.filter(x=>x!==id);save();renderSetup();recompute()});
+let UNDO=null,toastT;
+function delTarget(id){
+  const snap={custom:clone(S.custom),deleted:clone(S.deleted||[]),off:clone(S.off)};
+  const t=allT().find(x=>x.id===id);if(!t)return;
+  if(S.custom.some(x=>x.id===id))S.custom=S.custom.filter(x=>x.id!==id);else S.deleted=[...(S.deleted||[]),id];
+  S.off=S.off.filter(x=>x!==id);save();renderSetup();recompute();
+  UNDO=snap;$('toastmsg').textContent=t.name+' deleted';$('toast').hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>{$('toast').hidden=true;UNDO=null},7000);
+}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-delete]');if(b)delTarget(b.dataset.delete)});
+$('undo').addEventListener('click',()=>{if(!UNDO)return;Object.assign(S,UNDO);UNDO=null;save();$('toast').hidden=true;renderSetup();recompute()});
+$('restore').addEventListener('click',()=>{S.deleted=[];save();renderSetup();recompute()});
+$('reset').addEventListener('click',()=>{S=clone(DEF);CLOUD=[];save();renderSetup();recompute()});
+show(location.hash.slice(1));
+if(!A){$('tonight').innerHTML='<div class="err">The astronomy library didn’t load. Check the connection and reload.</div>'}
+else{renderSetup();setTimeout(()=>{try{compute();all();fetchWx()}catch(e){$('tonight').innerHTML='<div class="err">Couldn’t calculate the sky: '+esc(e.message)+'</div>'}},30)}
+}
+</script>
+</body>
+</html>
