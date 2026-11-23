@@ -83,8 +83,12 @@ legend{font-weight:700;padding:0 6px}
 .row{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,180px),1fr));gap:12px}
 label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--mute)}
 input,select{min-height:44px;font-size:16px;padding:0 12px;border-radius:10px;border:1px solid var(--line);background:#0c1328;color:var(--ink)}
-.checks{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,210px),1fr));gap:2px 12px}
-.checks label{flex-direction:row;align-items:center;gap:10px;color:var(--ink);font-size:15px;min-height:40px}
+.checks{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,270px),1fr));gap:2px 20px}
+.checks label{flex-direction:row;align-items:center;gap:10px;color:var(--ink);font-size:15px;min-height:44px;flex:1;cursor:pointer}
+.tn{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tn small{color:var(--mute);font-size:13px;margin-left:6px}
+.trow .xbtn{width:36px;padding:0;display:inline-grid;place-items:center;opacity:.55}
+.trow:hover .xbtn,.trow .xbtn:focus-visible{opacity:1}
 .checks input{min-height:0;width:20px;height:20px;flex:none;margin:0;accent-color:var(--red)}
 .hint{font-size:13px;color:var(--mute);margin-top:8px}
 .cust{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:6px 0;border-top:1px solid var(--line)}
@@ -179,7 +183,7 @@ footer{color:var(--mute);font-size:13px}
         <p class="hint">Filters change how much the Moon matters for emission nebulae. Galaxies and clusters always want a dark, moonless sky.</p>
       </fieldset>
       <fieldset><legend>Targets to plan for</legend>
-        <p class="hint" style="margin:0 0 8px">Untick to hide a target for now, or delete it to remove it from the app.</p><div id="s-targets"></div><button type="button" class="btn" id="restore" style="margin-top:12px" hidden>Restore deleted targets</button>
+        <p class="hint" style="margin:0 0 8px">Untick to hide a target for now, or use × to remove it from the app.</p><div id="s-targets"></div><button type="button" class="btn" id="restore" style="margin-top:12px" hidden>Restore deleted targets</button>
       </fieldset>
       <fieldset><legend>Add a target</legend>
         <div class="row">
@@ -273,6 +277,7 @@ const fmt=t=>t?t.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):'—';
 const fmtD=d=>d.toLocaleDateString([],{weekday:'short',month:'short',day:'numeric'});
 const dkey=d=>d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();
 const GROUPS=[['Planets and the Moon',['planet','moon']],['Galaxies',['galaxy','milkyway']],['Emission nebulae',['emission']],['Clusters and reflection nebulae',['broadband']]];
+const tname=n=>{const m=n.match(/^(.*?)\s*\(([^)]+)\)$/);return m?`<span class="tn">${esc(m[1])}<small>${esc(m[2])}</small></span>`:`<span class="tn">${esc(n)}</span>`};
 const allT=()=>[...CAT.filter(t=>!(S.deleted||[]).includes(t.id)),...S.custom];
 const targets=()=>allT().filter(t=>!S.off.includes(t.id));
 const fov=()=>{const f=+S.focal||400,c=2*180/Math.PI*60;return[c*Math.atan(S.sw/(2*f)),c*Math.atan(S.sh/(2*f))]};
@@ -390,7 +395,7 @@ function renderSetup(){
   const p=S.sw+'x'+S.sh;$('s-preset').value=[...$('s-preset').options].some(o=>o.value===p)?p:'';
     $('s-targets').innerHTML=GROUPS.map(([lab,types],gi)=>{const ts=allT().filter(t=>types.includes(t.type));if(!ts.length)return'';
     const on=ts.filter(t=>!S.off.includes(t.id)).length;
-    return `<div class="tgroup"><div class="ghead"><h4>${lab}</h4><div class="gbtns"><button type="button" class="xbtn" data-gall="${gi}" ${on===ts.length?'disabled':''}>All on</button><button type="button" class="xbtn" data-gnone="${gi}" ${on===0?'disabled':''}>All off</button></div></div><div class="checks">${ts.map(t=>`<div class="trow"><label><input type="checkbox" data-t="${esc(t.id)}" ${S.off.includes(t.id)?'':'checked'}>${esc(t.name)}</label><button type="button" class="xbtn" data-delete="${esc(t.id)}" aria-label="Delete ${esc(t.name)}">Delete</button></div>`).join('')}</div></div>`}).join('');
+    return `<div class="tgroup"><div class="ghead"><h4>${lab}</h4><div class="gbtns"><button type="button" class="xbtn" data-gall="${gi}" ${on===ts.length?'disabled':''}>All on</button><button type="button" class="xbtn" data-gnone="${gi}" ${on===0?'disabled':''}>All off</button></div></div><div class="checks">${ts.map(t=>`<div class="trow"><label title="${esc(t.name)}"><input type="checkbox" data-t="${esc(t.id)}" ${S.off.includes(t.id)?'':'checked'}>${tname(t.name)}</label><button type="button" class="xbtn" data-delete="${esc(t.id)}" aria-label="Delete ${esc(t.name)}" title="Delete"><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M2 2l10 10M12 2L2 12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button></div>`).join('')}</div></div>`}).join('');
   const nd=(S.deleted||[]).length;$('restore').hidden=!nd;$('restore').textContent=`Restore ${nd} deleted built-in target${nd===1?'':'s'}`;
   $('c-list').innerHTML=S.custom.map(t=>`<div class="cust"><span>${esc(t.name)} <span class="small mute">RA ${t.ra}h · Dec ${t.dec}°</span></span><button type="button" class="cbtn" data-del="${esc(t.id)}">Remove</button></div>`).join('');
 }
