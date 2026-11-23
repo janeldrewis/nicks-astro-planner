@@ -384,7 +384,7 @@ function renderTargets(){
     const r=T.size/fw,w=Math.min(100,r*100);
     const fit=T.type==='planet'?'Tiny: planetary camera and Barlow territory':r<0.08?'Tiny in frame: needs more focal length':r<0.3?'Small: will need cropping':r<=0.9?'Good fit':r<=1.25?'Tight fit':'Bigger than frame: wider lens or mosaic';
     const best=NIGHTS.filter(n=>!CLOUD.includes(n.key)).map(n=>({n,r:n.res.find(x=>x.T.id===T.id)})).filter(x=>x.r&&x.r.stars>0).sort((a,b)=>b.r.q-a.r.q).slice(0,3);
-    return `<div class="tcard"><div class="thead"><h3>${esc(T.name)}</h3><button type="button" class="xbtn" data-delete="${esc(T.id)}" aria-label="Delete ${esc(T.name)}">Delete</button></div><p class="small mute">${TYPES[T.type]} · ${fmtArc(T.size)} across</p>
+    return `<div class="tcard"><h3>${esc(T.name)}</h3><p class="small mute">${TYPES[T.type]} · ${fmtArc(T.size)} across</p>
      <div class="fit"><div class="frame" aria-hidden="true"><i style="width:${Math.max(2,w).toFixed(1)}%"></i></div><p class="small" style="margin-top:6px">${fit}</p></div>
      <p class="small mute">Best nights in the next 30</p>
      <ul class="best">${best.map(b=>`<li><span>${fmtD(b.n.day)} <span class="dots">${dots(b.r.stars)}</span></span><span class="small mute">${b.r.win?fmt(b.r.win[0])+'–'+fmt(b.r.win[1]):''}</span></li>`).join('')||'<li class="mute">Not well placed this month</li>'}</ul></div>`}).join('');
